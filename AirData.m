@@ -38,7 +38,7 @@ end
 %Region of interest:
 lower_chan = 2000;
 upper_chan = 3000;
-ROI = [lower_chan upper_chan];
+binROI = [lower_chan upper_chan];
 
 %Convert bin # to energy:
 %E = A + B*ch + C*ch^2 where ch is the bin # (channel)
@@ -46,9 +46,7 @@ ROI = [lower_chan upper_chan];
 conv.A = 0;
 conv.B = 1;
 conv.C = 0;
-E = conv.A + conv.B*data(:,2) + conv.C*data(:,2).^2;
 
 %I think it would be good to write an activity counter function.  Inputs
 % would be data and ROI.  Outputs would be time and activity.
-counts = 0;
-activity = zeros(1000,1);
+[t,a] = AirActivityCounter(data(:,2),data(:,1),conv,10000,binROI);
