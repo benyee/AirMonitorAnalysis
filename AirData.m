@@ -2,7 +2,11 @@
 clc; clear all; close all;
 
 %Name of directory where data files are located: (Need a slash at the end)
-dir = 'C:\Users\al gore\Dropbox\UCB Air Monitor\Data\Bkg_20121123withpump\';
+%For Ben's PC:
+%dir = 'C:\Users\al gore\Dropbox\UCB Air Monitor\Data\Bkg_20121123withpump\';
+%For Ben's MAC:
+dir = '/Users/benyee/Dropbox/UCB Air Monitor/Data/Bkg_20121123withpump/';
+
 %Base name of data files: (The data is usually split into multiple
 %   files, without the file number and without the .txt)
 %For example, if the first file name is data_0.txt, the 2nd one should be
