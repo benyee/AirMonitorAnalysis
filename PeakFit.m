@@ -1,4 +1,4 @@
-function res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag)
+function res = PeakFitE(b,n,ROI,numPeaks,sig_est,plotflag,cubicflag)
 
 % res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag)
 %
@@ -28,11 +28,14 @@ function res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag)
 %         res.src1cnts = total source counts in peak 1
 %         res.src2cnts = total source counts in peak 2 (if applicable)
 %
+%   3/19/2010 - Script created from SDV peak fitting base - DHC
+%
+%   3/22/2010 - Added Cubic background model
+
 
 
     if length(ROI) ~= 2
         error('ROI must have two elements [bmin,bmax]');
-        return;
     end
     
     if size(b,1) > 1
@@ -43,6 +46,9 @@ function res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag)
         n = n';
     end
     
+    if nargin < 7
+        cubicflag = 0;
+    end
 
     b_o = b;
     n_o = n;
@@ -51,9 +57,11 @@ function res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag)
     b = b(F); n = n(F);
     
     if numPeaks==1
-        mxb = b(find(n==max(n)));
+        mxb = b(n==max(n));
+        %mxb = b(find(n==max(n)));
         mxb = mxb(1);
 
+        %dE = 1e-6;
         %Estimates
         %sig_est = 35;  %keV
         
@@ -73,25 +81,53 @@ function res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag)
         f = fittype('m*x + b + A/sqrt(2*pi*sig^2)*exp(-(x-pk)^2/(2*sig^2))','options',s);
         [ft,gof] = fit(b',n',f);
         
+        
+        %Addind cubic fitting here
+        % parameters: [A,b,m,m2,m3,pk,sig]
+        
+        if cubicflag
+            s = fitoptions('Method','NonlinearLeastSquares',...
+                                'Lower',[0,-inf,-inf,-inf,-inf,0,0],...
+                                'Upper',[inf,inf,inf,inf,inf,inf,inf],...
+                                'Startpoint',[ft.A,b_est,ft.m,0,0,ft.pk,ft.sig]);
+            f = fittype('m3*x^3 + m2*x^2 + m*x + b + A/sqrt(2*pi*sig^2)*exp(-(x-pk)^2/(2*sig^2))','options',s);
+            [ft,gof] = fit(b',n',f);
+
+        end   
+        
         if plotflag
             b_hires = min(b):(b(2)-b(1))/10:max(b);
             semilogy(b_o,n_o,'b',b_o,n_o,'k.'); hold on;
-            semilogy(b_hires,ft.b + ft.m*b_hires,'r','LineWidth',2.0);
-            semilogy(b_hires,ft.b + ft.m*b_hires + ft.A/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk).^2/(2*ft.sig^2)),'g','LineWidth',2.0);
+            if ~cubicflag
+                semilogy(b_hires,ft.b + ft.m*b_hires,'r','LineWidth',2.0);
+                semilogy(b_hires,ft.b + ft.m*b_hires + ...
+                    ft.A/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk).^2/(2*ft.sig^2)),'g','LineWidth',2.0);
+            else
+                semilogy(b_hires,ft.b + ft.m*b_hires + ft.m2*b_hires.^2 + ft.m3*b_hires.^3,'r','LineWidth',2.0);
+                semilogy(b_hires,ft.b + ft.m*b_hires + ...
+                    ft.m2*b_hires.^2 + ft.m3*b_hires.^3 + ...
+                    ft.A/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk).^2/(2*ft.sig^2)),'g','LineWidth',2.0);
+            end
             drawnow;
             hold off;
         end
         
         ci = confint(ft,.68);
         cnts = sum(n);
-        bkg_ = ft.b + ft.m*b;
-        bkg = round(sum(ft.b + ft.m*b));
+        if cubicflag
+            bkg_ = ft.b + ft.m*b + ft.m2*b.^2 + ft.m3*b.^3;
+            os = 2;
+        else
+            bkg_ = ft.b + ft.m*b;
+            os = 0;
+        end
+        bkg = round(sum(bkg_));
         src = round(sum(n - bkg_));
 
         disp('Fit Results');
         disp('-----------');
-        disp(['Peak Value: ',num2str(ft.pk),' ( ',num2str(ci(1,4)),' , ',num2str(ci(2,4)),' )']);
-        disp(['FWHM: ',num2str(2.355*ft.sig),' ( ',num2str(2.355*ci(1,5)),' , ',num2str(2.355*ci(2,5)),' )']);
+        disp(['Peak Value: ',num2str(ft.pk),' ( ',num2str(ci(1,4+os)),' , ',num2str(ci(2,4+os)),' )']);
+        disp(['FWHM: ',num2str(2.355*ft.sig),' ( ',num2str(2.355*ci(1,5+os)),' , ',num2str(2.355*ci(2,5+os)),' )']);
         disp(['Total Counts: ',num2str(cnts),' ( ',num2str(round(cnts-sqrt(cnts))),' , ',num2str(round(cnts+sqrt(cnts))),' )']);
         disp(['Background Counts: ',num2str(bkg),' ( ',num2str(round(bkg-sqrt(bkg))),' , ',num2str(round(bkg+sqrt(bkg))),' )']);
         disp(['Peak Counts: ',num2str(src),' ( ',num2str(round(src-sqrt(src+bkg))),' , ',num2str(round(src+sqrt(src+bkg))),' )']);
@@ -114,7 +150,8 @@ function res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag)
         NBkg = b_est + m_est*b;
         DBkg = n - NBkg;
         
-        F = find(DBkg < 0);
+        %F = find(DBkg < 0);
+        F = find(DBkg < 0, 1);
         if ~isempty(F)
             indMax = find(DBkg == min(DBkg));
             indMax = indMax(1);
@@ -147,36 +184,79 @@ function res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag)
                                       ]);
         f = fittype('m*x + b + A/sqrt(2*pi*sig^2)*exp(-(x-pk)^2/(2*sig^2))+A2/sqrt(2*pi*sig^2)*exp(-(x-pk2)^2/(2*sig^2))','options',s);
         [ft,gof] = fit(b',n',f);
+        
+        
+        if cubicflag
+
+            s = fitoptions('Method','NonlinearLeastSquares',...
+                        'Lower',[0,0,-inf,-inf,-inf,-inf,0,0,0],...
+                        'Upper',[inf,inf,inf,inf,inf,inf,inf,inf,inf],...
+                        'Startpoint',[ft.A,...
+                                      ft.A2,...
+                                      ft.b,...
+                                      ft.m,...
+                                      0,...
+                                      0,...
+                                      ft.pk,...
+                                      ft.pk2,...
+                                      ft.sig,...
+                                      ]);
+            f = fittype('m3*x^3 + m2*x^2 + m*x + b + A/sqrt(2*pi*sig^2)*exp(-(x-pk)^2/(2*sig^2))+A2/sqrt(2*pi*sig^2)*exp(-(x-pk2)^2/(2*sig^2))','options',s);
+            [ft,gof] = fit(b',n',f);      
+        end
+        
+        
         if plotflag
             b_hires = min(b):(b(2)-b(1))/10:max(b);
             semilogy(b_o,n_o,'b',b_o,n_o,'k.'); hold on
-            semilogy(b_hires,ft.b + ft.m*b_hires,'r','LineWidth',2.0);
-            semilogy(b_hires,ft.b + ft.m*b_hires + ft.A/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk).^2/(2*ft.sig^2)),'m','LineWidth',2.0);
-            semilogy(b_hires,ft.b + ft.m*b_hires + ft.A2/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk2).^2/(2*ft.sig^2)),'g','LineWidth',2.0);
-            semilogy(b_hires,ft.b + ft.m*b_hires + ft.A/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk).^2/(2*ft.sig^2))+ft.A2/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk2).^2/(2*ft.sig^2)),'k','LineWidth',2.0);
+            if ~cubicflag
+                semilogy(b_hires,ft.b + ft.m*b_hires,'r','LineWidth',2.0);
+                semilogy(b_hires,ft.b + ft.m*b_hires + ft.A/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk).^2/(2*ft.sig^2)),'m','LineWidth',2.0);
+                semilogy(b_hires,ft.b + ft.m*b_hires + ft.A2/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk2).^2/(2*ft.sig^2)),'g','LineWidth',2.0);
+                semilogy(b_hires,ft.b + ft.m*b_hires + ft.A/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk).^2/(2*ft.sig^2))+ft.A2/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk2).^2/(2*ft.sig^2)),'k','LineWidth',2.0);
+            else
+                semilogy(b_hires,ft.b + ft.m*b_hires + ft.m2*b_hires.^2 + ft.m3*b_hires.^3,'r','LineWidth',2.0);
+                semilogy(b_hires,ft.b + ft.m*b_hires + ft.m2*b_hires.^2 + ft.m3*b_hires.^3 + ft.A/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk).^2/(2*ft.sig^2)),'m','LineWidth',2.0);
+                semilogy(b_hires,ft.b + ft.m*b_hires + ft.m2*b_hires.^2 + ft.m*b_hires.^3 + ft.A2/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk2).^2/(2*ft.sig^2)),'g','LineWidth',2.0);
+                semilogy(b_hires,ft.b + ft.m*b_hires + ft.m2*b_hires.^2 + ft.m3*b_hires.^3 + ft.A/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk).^2/(2*ft.sig^2))+ft.A2/sqrt(2*pi*ft.sig^2)*exp(-(b_hires-ft.pk2).^2/(2*ft.sig^2)),'k','LineWidth',2.0);
+            end    
             hold off
             drawnow;
         end
         
         cnts = sum(n);
         ci = confint(ft,.68);
-        n1 = ft.b + ft.m*b + ft.A/sqrt(2*pi*ft.sig)*exp(-(b-ft.pk).^2/(2*ft.sig^2));
-        n2 = ft.b + ft.m*b + ft.A2/sqrt(2*pi*ft.sig)*exp(-(b-ft.pk2).^2/(2*ft.sig^2));
+        if ~cubicflag
+            n1 = ft.b + ft.m*b + ft.A/sqrt(2*pi*ft.sig)*exp(-(b-ft.pk).^2/(2*ft.sig^2));
+            n2 = ft.b + ft.m*b + ft.A2/sqrt(2*pi*ft.sig)*exp(-(b-ft.pk2).^2/(2*ft.sig^2));
+        else
+           n1 = ft.b + ft.m*b + ft.m2*b.^2 + ft.m3*b.^3 + ft.A/sqrt(2*pi*ft.sig)*exp(-(b-ft.pk).^2/(2*ft.sig^2));
+            n2 = ft.b + ft.m*b + ft.A2/sqrt(2*pi*ft.sig)*exp(-(b-ft.pk2).^2/(2*ft.sig^2));
+        end
+            
         db = b(2)-b(1);
+        
         cnts1 = sum(n1)/db;
         cnts2 = sum(n2)/db;
-        bkg_ = ft.b + ft.m*b;
-        bkg = round(sum(ft.b + ft.m*b));
+        if ~cubicflag
+            bkg_ = ft.b + ft.m*b;
+            os = 0;
+        else
+            bkg_ = ft.b + ft.m*b + ft.m2*b.^2 + ft.m3*b.^3;
+            os = 2;
+        end
+        
+        bkg = round(sum(bkg_));
         src1 = round(sum(n1 - bkg_));
         src2 = round(sum(n2 - bkg_));
 
         disp('Fit Results');
         disp(['Background Counts: ',num2str(bkg),' ( ',num2str(round(bkg-sqrt(bkg))),' , ',num2str(round(bkg+sqrt(bkg))),' )']);
-        disp(['Peak 1 Value: ',num2str(ft.pk),' ( ',num2str(ci(1,5)),' , ',num2str(ci(2,5)),' )']);
-        disp(['FWHM 1: ',num2str(2.355*ft.sig),' ( ',num2str(2.355*ci(1,7)),' , ',num2str(2.355*ci(2,7)),' )']);
+        disp(['Peak 1 Value: ',num2str(ft.pk),' ( ',num2str(ci(1,5+os)),' , ',num2str(ci(2,5+os)),' )']);
+        disp(['FWHM 1: ',num2str(2.355*ft.sig),' ( ',num2str(2.355*ci(1,7+os)),' , ',num2str(2.355*ci(2,7+os)),' )']);
         disp(['Peak 1 Fit Area: ',num2str(ft.A/db),' ( ',num2str(ci(1,1)/db),' , ',num2str(ci(2,1)/db),' )']);
         disp(['Peak 2 Value: ',num2str(ft.pk2),' ( ',num2str(ci(1,6)),' , ',num2str(ci(2,6)),' )']);
-        disp(['FWHM 2: ',num2str(2.355*ft.sig),' ( ',num2str(2.355*ci(1,7)),' , ',num2str(2.355*ci(2,7)),' )']);
+        disp(['FWHM 2: ',num2str(2.355*ft.sig),' ( ',num2str(2.355*ci(1,7+os)),' , ',num2str(2.355*ci(2,7+os)),' )']);
         disp(['Peak 2 Fit Area: ',num2str(ft.A2/db),' ( ',num2str(ci(1,2)/db),' , ',num2str(ci(2,2)/db),' )']);
         disp(['Total Counts: ',num2str(cnts),' (',num2str(cnts-sqrt(cnts)),' , ',num2str(cnts+sqrt(cnts)),' )']);
 
@@ -189,6 +269,7 @@ function res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag)
         res.bkgcnts = bkg;
         res.src1cnts = src1;
         res.src2cnts = src2;
+        res.cubicflag = cubicflag;
         
     end
     
