@@ -17,26 +17,18 @@ tempdata = cell(1,lastfileindex+1);
 totaldatalength = 0;
 for i = 1:lastfileindex+1
     tempdata{i} = load([dir data_file num2str(i-1) '.txt']);
-    totaldatalength = totaldatalength + size(tempdata{i},1);
+    totaldatalength = totaldatalength + size(tempdata,1);
 end
 
 %Combine all the cells into one matrix:
 data = zeros(totaldatalength,2);
 marker = 1;
 for i = 1:lastfileindex+1
-    nextmarker = marker+size(tempdata{i},1);
-    data(marker:nextmarker-1,:) = tempdata{i};
-    marker = nextmarker;
+    data(
 end
-%Now all the data has been consolidated into one matrix named data
-
 
 %Region of interest:
 lower_chan = 2000;
 upper_chan = 3000;
 ROI = [lower_chan upper_chan];
 
-%I think it would be good to write an activity counter function.  Inputs
-% would be data and ROI.  Outputs would be time and activity.
-counts = 0;
-activity = zeros(1000,1);
