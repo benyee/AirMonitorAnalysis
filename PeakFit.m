@@ -1,4 +1,4 @@
-function res = PeakFitE(b,n,ROI,numPeaks,sig_est,plotflag,cubicflag)
+function res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag,cubicflag)
 
 % res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag)
 %
