@@ -22,6 +22,7 @@ totaldatalength = 0;
 for i = 1:lastfileindex+1
     tempdata{i} = load([dir data_file num2str(i-1) '.txt']);
     totaldatalength = totaldatalength + size(tempdata{i},1);
+    progressbar(i/(lastfileindex+1));
 end
 
 %Combine all the cells into one matrix:
@@ -31,12 +32,13 @@ for i = 1:lastfileindex+1
     nextmarker = marker+size(tempdata{i},1);
     data(marker:nextmarker-1,:) = tempdata{i};
     marker = nextmarker;
+    progressbar(i/(lastfileindex+1));
 end
 %Now all the data has been consolidated into one matrix named data
 
 
 %Region of interest:
-lower_chan = 2000;
+lower_chan = 1000;
 upper_chan = 3000;
 binROI = [lower_chan upper_chan];
 
@@ -50,3 +52,5 @@ conv.C = 0;
 %I think it would be good to write an activity counter function.  Inputs
 % would be data and ROI.  Outputs would be time and activity.
 [t,a] = AirActivityCounter(data(:,2),data(:,1),conv,10000,binROI);
+figure(gcf+1);
+plot(t,a);
