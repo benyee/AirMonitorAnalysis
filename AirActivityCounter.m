@@ -27,6 +27,7 @@ while i <= length(t_out) && j<=length(t_in)
     t_start = t_in(j);
     k = 1;
     
+    %Random comment
     while k <= n && j <= length(t_in)
         if bin(j)>=binROI(1) && bin(j)<=binROI(2)
             counts(bin(j)) = counts(bin(j)) + 1;
