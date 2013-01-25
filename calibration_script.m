@@ -17,7 +17,7 @@ bkglivetime = 164682.65;
 %Energies of calibration lines, given by calibration info sheet:
 E = [59.5 88.0 122.1 165.9 279.2 391.7 661.7 898.0 1173.2 1332.5 1836.1];
 %Corresponding bin numbers in spectrum:
-peaks = round(E);
+peaks = round(E/1460*3977);
 %Activities given in the calibration info sheet:
 act_0 = [669.3 945.7 503.9 713.8 1525 979.6 643.6 2372 1208 1208 2512];
 %Half-lives, in days, as given by calibration info sheet:
@@ -36,8 +36,16 @@ bkgcts_err = cts;
 
 %Cycle through each peak:
 for i = 1:length(act)
+    ROI = [peaks(i)-50 peaks(i)+50];
+    temp = PeakFit(ROI(1):ROI(2),spec(ROI(1):ROI(2)),ROI,1,5,0,0);
+    cts(i) = temp.src1cnts;
+    cts_err(i) = sqrt(temp.cnts1^2+temp.bkgcnts^2);
     
+    ROI = [peaks(i)-50 peaks(i)+50];
+    temp = PeakFit(ROI(1):ROI(2),bkgspec(ROI(1):ROI(2)),ROI,1,5,0,0);
+    bkgcts(i) = temp.src1cnts;
+    bkgcts_err(i) = sqrt(temp.cnts1^2+temp.bkgcnts^2);
 end
 
-eff = (cts-bkgcts)./act;
-err = sqrt(cts_err.^2+bkgcts_err.^2)./act;
+eff = (cts/livetime-bkgcts/bkglivetime)./act;
+err = sqrt((cts_err/livetime).^2+(bkgcts_err/bkglivetime).^2)./act;
