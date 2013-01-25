@@ -1,4 +1,4 @@
-%This script will be used to acquire data using the LynxDAQ GUI.
+%This script will be used to analyze data acquired using the LynxDAQ GUI.
 
 %If data hasn't been loaded, load the data.
 if exist('data')~=1
@@ -42,9 +42,7 @@ end
 
 
 %Region of interest:
-lower_chan = 3900;
-upper_chan = 4100;
-binROI = [lower_chan upper_chan];
+binROI = [3900 4100];
 
 %Convert bin # to energy:
 %E = A + B*ch + C*ch^2 where ch is the bin # (channel)

@@ -1,0 +1,17 @@
+%Calibration Analysis Script
+
+%Where is the calibration spectrum located?
+dir = '';
+%Load spectrum:
+spec = load(dir);
+livetime = 100000;  %Live time of spectrum, in seconds
+
+
+%Calibration information:
+% E = [59.5 88.0 122.1 165.9 279.2 391.7 661.7 898.0 1173.2 1332.5 1836.1];
+%List of bin #'s of the peaks in the calibration standard:
+peaks = round(E);
+%Activities given in the calibration info sheet:
+act_0 = [];
+%Half-lives 
+
