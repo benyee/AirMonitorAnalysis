@@ -38,6 +38,10 @@ function res = PeakFit(b,n,ROI,numPeaks,sig_est,plotflag,cubicflag)
         error('ROI must have two elements [bmin,bmax]');
     end
     
+    if numPeaks > 2
+        error('Sorry, not good enough to do that...');
+    end
+    
     if size(b,1) > 1
         b = b';
     end

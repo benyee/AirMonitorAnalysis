@@ -28,6 +28,17 @@ dt = 52*24*3600+22*3600+56*60;
 %Current activity:
 act = act_0.*exp(-log(2)./hl*dt);
 
+%Half-Widths of each ROI: (to the left and right of "peaks")
+dPL = 50*ones(size(act));
+dPR = dPL;
+%dPL(1) = 15; dPR(1) = 35;
+%Number of lines in each ROI: (Most should be 1)
+numPeaks = ones(size(act));
+%Whether to take the left (0) or right (1) peak
+whichPeak = zeros(size(numPeaks));
+
+
+
 %Variables to store counts:
 cts = zeros(size(act));
 bkgcts = cts;
@@ -35,14 +46,17 @@ cts_err = cts;
 bkgcts_err = cts;
 
 %Cycle through each peak:
-for i = 1:length(act)
-    ROI = [peaks(i)-50 peaks(i)+50];
-    temp = PeakFit(ROI(1):ROI(2),spec(ROI(1):ROI(2)),ROI,1,5,0,0);
+for i = 1%:length(act)
+    figure(i);
+    ROI = [peaks(i)-dPL(i) peaks(i)+dPR(i)];
+   
+    temp = PeakFit(ROI(1):ROI(2),spec(ROI(1):ROI(2)),ROI,numPeaks(i),5,1,1);
     cts(i) = temp.src1cnts;
     cts_err(i) = sqrt(temp.cnts1^2+temp.bkgcnts^2);
     
-    ROI = [peaks(i)-50 peaks(i)+50];
-    temp = PeakFit(ROI(1):ROI(2),bkgspec(ROI(1):ROI(2)),ROI,1,5,0,0);
+    return;
+    
+    temp = PeakFit(ROI(1):ROI(2),bkgspec(ROI(1):ROI(2)),ROI,numPeaks(i),5,0,0);
     bkgcts(i) = temp.src1cnts;
     bkgcts_err(i) = sqrt(temp.cnts1^2+temp.bkgcnts^2);
 end
