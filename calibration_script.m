@@ -31,11 +31,13 @@ act = act_0.*exp(-log(2)./hl*dt);
 %Half-Widths of each ROI: (to the left and right of "peaks")
 dPL = 50*ones(size(act));
 dPR = dPL;
-%dPL(1) = 15; dPR(1) = 35;
+dPR(3) = 30;
+dPL(5) = 20; dPR(5) = 40;
 %Number of lines in each ROI: (Most should be 1)
 numPeaks = ones(size(act));
 %Whether to take the left (0) or right (1) peak
 whichPeak = zeros(size(numPeaks));
+
 
 
 
@@ -46,20 +48,21 @@ cts_err = cts;
 bkgcts_err = cts;
 
 %Cycle through each peak:
-for i = 1%:length(act)
-    figure(i);
+for i = 1:length(act)
     ROI = [peaks(i)-dPL(i) peaks(i)+dPR(i)];
    
-    temp = PeakFit(ROI(1):ROI(2),spec(ROI(1):ROI(2)),ROI,numPeaks(i),5,1,1);
+    temp = PeakFit(ROI(1):ROI(2),spec(ROI(1):ROI(2)),ROI,numPeaks(i),5,0,0);
     cts(i) = temp.src1cnts;
-    cts_err(i) = sqrt(temp.cnts1^2+temp.bkgcnts^2);
-    
-    return;
+    %cts_err(i) = sqrt(temp.cnts1^2+temp.bkgcnts^2);
     
     temp = PeakFit(ROI(1):ROI(2),bkgspec(ROI(1):ROI(2)),ROI,numPeaks(i),5,0,0);
-    bkgcts(i) = temp.src1cnts;
-    bkgcts_err(i) = sqrt(temp.cnts1^2+temp.bkgcnts^2);
+    %Check to make sure that the fit isn't some weird glitch:
+    if temp.bkgcnts > 0
+        bkgcts(i) = temp.src1cnts;
+        %bkgcts_err(i) = sqrt(temp.cnts1^2+temp.bkgcnts^2);
+    end
 end
 
 eff = (cts/livetime-bkgcts/bkglivetime)./act;
-err = sqrt((cts_err/livetime).^2+(bkgcts_err/bkglivetime).^2)./act;
+err = sqrt(cts/livetime + bkgcts/bkglivetime)./act;
+%err = sqrt((cts_err/livetime).^2+(bkgcts_err/bkglivetime).^2)./act;
