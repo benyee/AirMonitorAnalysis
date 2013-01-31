@@ -1,5 +1,4 @@
 %Calibration Analysis Script
-%Stephen Comment
 close all; clc; clear all;
 
 %Where is the calibration spectrum located?
