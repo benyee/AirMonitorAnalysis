@@ -34,6 +34,8 @@ dPL = 50*ones(size(act));
 dPR = dPL;
 dPR(3) = 30;
 dPL(5) = 20; dPR(5) = 40;
+dPR(8) = 30;
+dPR(11) = 20;
 %Number of lines in each ROI: (Most should be 1)
 numPeaks = ones(size(act));
 %Whether to take the left (0) or right (1) peak
@@ -50,13 +52,19 @@ bkgcts_err = cts;
 
 %Cycle through each peak:
 for i = 1:length(act)
+    figure(1);
     ROI = [peaks(i)-dPL(i) peaks(i)+dPR(i)];
    
-    temp = PeakFit(ROI(1):ROI(2),spec(ROI(1):ROI(2)),ROI,numPeaks(i),5,0,0);
-    cts(i) = temp.src1cnts;
+    temp = PeakFit(ROI(1):ROI(2),spec(ROI(1):ROI(2)),ROI,numPeaks(i),5,1,0);
+    if whichPeak
+        cts(i) = temp.src2cnts;
+    else
+        cts(i) = temp.src1cnts;
+    end
     %cts_err(i) = sqrt(temp.cnts1^2+temp.bkgcnts^2);
     
-    temp = PeakFit(ROI(1):ROI(2),bkgspec(ROI(1):ROI(2)),ROI,numPeaks(i),5,0,0);
+    figure(2);
+    temp = PeakFit(ROI(1):ROI(2),bkgspec(ROI(1):ROI(2)),ROI,numPeaks(i),5,1,0);
     %Check to make sure that the fit isn't some weird glitch:
     if temp.bkgcnts > 0
         bkgcts(i) = temp.src1cnts;
