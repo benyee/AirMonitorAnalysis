@@ -2,7 +2,7 @@ clc; close all;
 %This script will be used to analyze data acquired using the LynxDAQ GUI.
 
 %If data hasn't been loaded, load the data.
-if ~exist('data','var')
+if exist('data')~=1
     clear all;
 
     %Name of directory where data files are located: (Need a slash at the end)
@@ -56,11 +56,7 @@ conv.A = 0;
 conv.B = 1;
 conv.C = 0;
 
-[t,a,ci] = AirActivityCounter(data(:,2),data(:,1),conv,5000,...
-    binROI,numPeaks,sig_est,plotflag,cubicflag);
-if plotflag
-    figure(gcf+1);
-end
-%Plot with 3 sigma confidence limits:
-errorbar((t-t(1))/3600,a,3*(ci(1,:)'-a),3*(a-ci(2,:)'),'*--');
+[t,a,ci] = AirActivityCounter(data(:,2),data(:,1),conv,2000,binROI,numPeaks,sig_est,cubicflag);
+figure(gcf+1);
+errorbar((t-t(1))/3600,a,3*(ci(1,:)'-a),a-ci(2,:)','*--');
 xlabel('Hours'); ylabel('Activity (Bq)');
